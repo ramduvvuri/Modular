@@ -9,19 +9,14 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import android.view.WindowManager
-import android.graphics.PixelFormat
-import android.view.Gravity
+import com.example.modular.ui.blocking.BlockingActivity
 
 class ModularAccessibilityService : AccessibilityService() {
 
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    private var windowManager: WindowManager? = null
-    private var currentOverlay: BlockingOverlayView? = null
     
     override fun onServiceConnected() {
         super.onServiceConnected()
-        windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
         startSessionMonitor()
     }
     
@@ -37,9 +32,6 @@ class ModularAccessibilityService : AccessibilityService() {
                         if (System.currentTimeMillis() >= session.endTimeMillis) {
                             // Session expired naturally
                             repository.clearSession()
-                            launch(Dispatchers.Main) {
-                                removeOverlay()
-                            }
                         }
                     }
                 } catch (e: Exception) {
@@ -60,17 +52,7 @@ class ModularAccessibilityService : AccessibilityService() {
             checkAndBlockApp(packageName)
         }
     }
-    
-    private fun removeOverlay() {
-        if (currentOverlay != null) {
-            try {
-                windowManager?.removeView(currentOverlay)
-            } catch (e: Exception) {
-                // Ignore if not attached
-            }
-            currentOverlay = null
-        }
-    }
+
 
     private fun checkAndBlockApp(packageName: String) {
         val app = application as? ModularApp ?: return
@@ -83,11 +65,6 @@ class ModularAccessibilityService : AccessibilityService() {
                 if (packageName == applicationContext.packageName || 
                     packageName == "com.android.systemui" || 
                     packageName == "com.google.android.inputmethod.latin") { // Allow keyboard
-                    
-                    // If returning to our app or system ui, we might want to remove overlay
-                    if (packageName == applicationContext.packageName) {
-                        launch(Dispatchers.Main) { removeOverlay() }
-                    }
                     return@launch
                 }
 
@@ -106,61 +83,17 @@ class ModularAccessibilityService : AccessibilityService() {
                     launch(Dispatchers.Main) {
                         showOverlay(packageName)
                     }
-                } else {
-                    launch(Dispatchers.Main) {
-                        removeOverlay()
-                    }
-                }
-            } else {
-                launch(Dispatchers.Main) {
-                    removeOverlay()
                 }
             }
         }
     }
     
     private fun showOverlay(packageName: String) {
-        if (currentOverlay != null) return // Already showing
-        
-        val overlay = BlockingOverlayView(
-            context = this,
-            blockedPackage = packageName,
-            onGoBack = {
-                val homeIntent = Intent(Intent.ACTION_MAIN).apply {
-                    addCategory(Intent.CATEGORY_HOME)
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                }
-                startActivity(homeIntent)
-                removeOverlay()
-            },
-            onLeaveMode = {
-                val leaveIntent = Intent(this, ExitTimerActivity::class.java).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                }
-                startActivity(leaveIntent)
-                removeOverlay()
-            }
-        )
-        
-        val params = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.MATCH_PARENT,
-            WindowManager.LayoutParams.MATCH_PARENT,
-            WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or 
-            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or 
-            WindowManager.LayoutParams.FLAG_FULLSCREEN or
-            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
-            PixelFormat.TRANSLUCENT
-        ).apply {
-            gravity = Gravity.CENTER
+        val intent = Intent(this, BlockingActivity::class.java).apply {
+            putExtra("blocked_package", packageName)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
-        
-        try {
-            windowManager?.addView(overlay, params)
-            currentOverlay = overlay
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        startActivity(intent)
     }
 
     override fun onInterrupt() {
