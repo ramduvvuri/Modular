@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Modular</string>
+    <string name="accessibility_service_description">Modular uses Accessibility Services to monitor foreground apps and enforce your focus mode whitelist without distractions.</string>
+</resources>
