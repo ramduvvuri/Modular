@@ -7,11 +7,26 @@ import com.example.modular.data.local.ModeEntity
 import com.example.modular.domain.repository.ModeRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
+
+import kotlinx.coroutines.launch
 
 class HomeViewModel(
     private val modeRepository: ModeRepository
 ) : ViewModel() {
+
+    init {
+        // Pre-populate "Night Mode" if database is completely empty
+        viewModelScope.launch {
+            val currentModes = kotlinx.coroutines.flow.first(modeRepository.getAllModes())
+            if (currentModes.isEmpty()) {
+                modeRepository.insertMode(
+                    ModeEntity(name = "Night Mode", icon = "🌙")
+                )
+            }
+        }
+    }
 
     val modes: StateFlow<List<ModeEntity>> = modeRepository.getAllModes()
         .stateIn(

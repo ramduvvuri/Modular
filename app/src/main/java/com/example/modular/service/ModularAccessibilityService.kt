@@ -11,6 +11,7 @@ import com.example.modular.ui.blocking.UninstallTimerActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import com.example.modular.ui.blocking.BlockingActivity
 
@@ -41,6 +42,36 @@ class ModularAccessibilityService : AccessibilityService() {
                                 repository.updateSession(session.copy(
                                     isPaused = false,
                                     pauseEndTimeMillis = null
+                                ))
+                            }
+                        }
+                    } else {
+                        // NO session running! Check if it's Night Mode time (21:00 to 07:00)
+                        val calendar = java.util.Calendar.getInstance()
+                        val hour = calendar.get(java.util.Calendar.HOUR_OF_DAY)
+                        
+                        if (hour >= 21 || hour < 7) {
+                            // Find the Night Mode preset
+                            val allModes = kotlinx.coroutines.flow.first(repository.getAllModes())
+                            val nightMode = allModes.find { it.name.equals("Night Mode", ignoreCase = true) }
+                            
+                            if (nightMode != null) {
+                                // Calculate next 7 AM
+                                val targetCalendar = java.util.Calendar.getInstance().apply {
+                                    set(java.util.Calendar.HOUR_OF_DAY, 7)
+                                    set(java.util.Calendar.MINUTE, 0)
+                                    set(java.util.Calendar.SECOND, 0)
+                                    if (hour >= 21) {
+                                        add(java.util.Calendar.DAY_OF_MONTH, 1) // 7 AM tomorrow
+                                    }
+                                }
+                                
+                                // Auto-start the session!
+                                repository.updateSession(com.example.modular.data.local.SessionEntity(
+                                    activeModeId = nightMode.id,
+                                    startTime = System.currentTimeMillis(),
+                                    endTimeMillis = targetCalendar.timeInMillis,
+                                    isRunning = true
                                 ))
                             }
                         }
