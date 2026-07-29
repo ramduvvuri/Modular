@@ -9,7 +9,6 @@ import com.example.modular.data.local.AllowedAppEntity
 import com.example.modular.data.local.SessionEntity
 import com.example.modular.data.local.NotificationEntity
 import com.example.modular.data.local.ModeDao
-import com.example.modular.data.local.AllowedAppDao
 import com.example.modular.data.local.SessionDao
 import com.example.modular.data.local.NotificationDao
 
@@ -21,7 +20,6 @@ import com.example.modular.data.local.NotificationDao
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun modeDao(): ModeDao
-    abstract fun allowedAppDao(): AllowedAppDao
     abstract fun sessionDao(): SessionDao
     abstract fun notificationDao(): NotificationDao
 
