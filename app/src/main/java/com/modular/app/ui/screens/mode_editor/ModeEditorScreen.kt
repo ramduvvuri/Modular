@@ -9,7 +9,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
@@ -21,7 +20,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.modular.app.data.model.InstalledApp
-import com.modular.app.ui.components.AppHeader
 import com.modular.app.ui.theme.DarkBackground
 import com.modular.app.ui.theme.ErrorAccent
 import com.modular.app.ui.theme.SurfaceDark
@@ -43,7 +41,6 @@ fun ModeEditorScreen(
     }
 
     val modeName by viewModel.modeName.collectAsState()
-    val modeIcon by viewModel.modeIcon.collectAsState()
     val isEditing by viewModel.isEditing.collectAsState()
     val installedApps by viewModel.installedApps.collectAsState()
     val selectedPackages by viewModel.selectedPackages.collectAsState()
@@ -65,16 +62,30 @@ fun ModeEditorScreen(
         containerColor = DarkBackground,
         topBar = {
             TopAppBar(
-                title = { Text(if (isEditing) "Edit Mode" else "New Mode", color = TextPrimary, fontWeight = FontWeight.Bold) },
+                title = {
+                    Text(
+                        text = if (isEditing) "Edit Mode" else "New Mode",
+                        color = TextPrimary,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back", tint = TextPrimary)
+                        Icon(
+                            imageVector = Icons.Default.ArrowBack,
+                            contentDescription = "Back",
+                            tint = TextPrimary
+                        )
                     }
                 },
                 actions = {
                     if (isEditing) {
                         IconButton(onClick = { viewModel.deleteMode(onBack) }) {
-                            Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete", tint = ErrorAccent)
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Delete",
+                                tint = ErrorAccent
+                            )
                         }
                     }
                 },
@@ -116,6 +127,8 @@ fun ModeEditorScreen(
                         color = TextPrimary
                     )
 
+                    Spacer(modifier = Modifier.height(4.dp))
+
                     Text(
                         text = "Select apps that are allowed during this mode. All other apps will be blocked.",
                         style = MaterialTheme.typography.bodyMedium,
@@ -128,7 +141,13 @@ fun ModeEditorScreen(
                         value = searchQuery,
                         onValueChange = { searchQuery = it },
                         placeholder = { Text("Search installed apps...", color = TextMuted) },
-                        leadingIcon = { Icon(imageVector = Icons.Default.Search, contentDescription = null, tint = TextSecondary) },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = null,
+                                tint = TextSecondary
+                            )
+                        },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(14.dp),
                         colors = OutlinedTextFieldDefaults.colors(
@@ -216,7 +235,7 @@ fun AppCheckRow(
                     color = TextPrimary
                 )
                 Text(
-                    text = if (app.isEmergency) "Emergency App • Always Allowed" else app.packageName,
+                    text = if (app.isEmergency) "Emergency App - Always Allowed" else app.packageName,
                     style = MaterialTheme.typography.bodyMedium,
                     color = if (app.isEmergency) TextSecondary else TextMuted
                 )

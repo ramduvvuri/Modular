@@ -1,7 +1,5 @@
 package com.modular.app.ui.screens.blocking
 
-import android.content.Intent
-import android.content.pm.PackageManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -62,7 +60,7 @@ fun BlockingScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             Text(
-                text = "📚 $modeName Mode",
+                text = "$modeName Mode",
                 style = MaterialTheme.typography.titleLarge,
                 color = TextSecondary,
                 textAlign = TextAlign.Center
@@ -89,7 +87,7 @@ fun BlockingScreen(
 
             Spacer(modifier = Modifier.height(48.dp))
 
-            Divider(color = Color(0xFF222222), thickness = 1.dp)
+            HorizontalDivider(color = Color(0xFF222222), thickness = 1.dp)
 
             Spacer(modifier = Modifier.height(48.dp))
 
