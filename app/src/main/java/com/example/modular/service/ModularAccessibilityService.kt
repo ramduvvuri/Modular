@@ -91,6 +91,12 @@ class ModularAccessibilityService : AccessibilityService() {
             event.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
             
             val packageName = event.packageName?.toString() ?: return
+            val className = event.className?.toString() ?: ""
+            
+            // Ignore system notifications and toasts to prevent false-positive blocks
+            if (className.contains("Notification") || className.contains("Toast") || className.contains("SystemUI")) {
+                return
+            }
             
             // Check for uninstall attempt
             if (checkForUninstallAttempt(packageName, event)) {

@@ -6,14 +6,16 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 
 @Database(
-    entities = [ModeEntity::class, AllowedAppEntity::class, SessionEntity::class],
-    version = 4,
+    entities = [ModeEntity::class, AllowedAppEntity::class, SessionEntity::class, NotificationEntity::class],
+    version = 5,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun modeDao(): ModeDao
+    abstract fun allowedAppDao(): AllowedAppDao
     abstract fun sessionDao(): SessionDao
+    abstract fun notificationDao(): NotificationDao
 
     companion object {
         @Volatile

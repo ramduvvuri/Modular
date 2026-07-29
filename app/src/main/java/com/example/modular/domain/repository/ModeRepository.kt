@@ -17,4 +17,9 @@ interface ModeRepository {
     suspend fun getSessionSync(): SessionEntity?
     suspend fun updateSession(session: SessionEntity)
     suspend fun clearSession()
+
+    // Notification Inbox
+    fun getAllNotifications(): Flow<List<com.example.modular.data.local.NotificationEntity>>
+    suspend fun insertNotification(notification: com.example.modular.data.local.NotificationEntity)
+    suspend fun clearAllNotifications()
 }

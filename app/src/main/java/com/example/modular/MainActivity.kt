@@ -18,6 +18,7 @@ import com.example.modular.ui.theme.ModularTheme
 import com.example.modular.ui.permissions.PermissionsScreen
 import com.example.modular.ui.permissions.isAccessibilityServiceEnabled
 import com.example.modular.ui.permissions.isOverlayPermissionGranted
+import com.example.modular.ui.permissions.isNotificationListenerGranted
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -60,7 +61,7 @@ fun ModularAppNavHost(app: ModularApp) {
     
     val context = androidx.compose.ui.platform.LocalContext.current
     val hasPermissions = remember {
-        isAccessibilityServiceEnabled(context) && isOverlayPermissionGranted(context)
+        isAccessibilityServiceEnabled(context) && isOverlayPermissionGranted(context) && isNotificationListenerGranted(context)
     }
 
     val startDest = when {
@@ -77,6 +78,12 @@ fun ModularAppNavHost(app: ModularApp) {
                         popUpTo(0)
                     }
                 }
+            )
+        }
+        composable("inbox") {
+            com.example.modular.ui.mode.NotificationInboxScreen(
+                repository = app.modeRepository,
+                onBack = { navController.popBackStack() }
             )
         }
         composable("home") {
@@ -148,6 +155,9 @@ fun ModularAppNavHost(app: ModularApp) {
                     val context = navController.context
                     val intent = android.content.Intent(context, ExitTimerActivity::class.java)
                     context.startActivity(intent)
+                },
+                onViewInbox = {
+                    navController.navigate("inbox")
                 }
             )
         }

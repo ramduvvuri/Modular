@@ -23,7 +23,8 @@ fun ActiveModeScreen(
     mode: ModeEntity?,
     session: SessionEntity?,
     totalAllowedApps: Int,
-    onLeaveMode: () -> Unit
+    onLeaveMode: () -> Unit,
+    onViewInbox: () -> Unit = {}
 ) {
     var timeLeftMillis by remember { mutableStateOf(0L) }
     var pauseTimeLeftMillis by remember { mutableStateOf(0L) }
@@ -130,7 +131,17 @@ fun ActiveModeScreen(
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text("Stats", fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text("Blocked Apps: $totalAllowedApps", style = MaterialTheme.typography.bodyLarge)                  }
+                        Text("Blocked Apps: $totalAllowedApps", style = MaterialTheme.typography.bodyLarge)                  
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Button(
+                    onClick = onViewInbox,
+                    modifier = Modifier.fillMaxWidth().height(56.dp)
+                ) {
+                    Text("View Intercepted Messages")
                 }
             } else {
                 Text(text = "Loading...")

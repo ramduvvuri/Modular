@@ -54,18 +54,26 @@ fun isOverlayPermissionGranted(context: Context): Boolean {
     return Settings.canDrawOverlays(context)
 }
 
+fun isNotificationListenerGranted(context: Context): Boolean {
+    val componentName = android.content.ComponentName(context, com.example.modular.service.ModularNotificationService::class.java)
+    val enabledListeners = Settings.Secure.getString(context.contentResolver, "enabled_notification_listeners")
+    return enabledListeners?.contains(componentName.flattenToString()) == true || enabledListeners?.contains(context.packageName) == true
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PermissionsScreen(onPermissionsGranted: () -> Unit) {
     val context = LocalContext.current
     var hasAccessibility by remember { mutableStateOf(isAccessibilityServiceEnabled(context)) }
     var hasOverlay by remember { mutableStateOf(isOverlayPermissionGranted(context)) }
+    var hasNotification by remember { mutableStateOf(isNotificationListenerGranted(context)) }
 
     LaunchedEffect(Unit) {
         while (true) {
             hasAccessibility = isAccessibilityServiceEnabled(context)
             hasOverlay = isOverlayPermissionGranted(context)
-            if (hasAccessibility && hasOverlay) {
+            hasNotification = isNotificationListenerGranted(context)
+            if (hasAccessibility && hasOverlay && hasNotification) {
                 onPermissionsGranted()
                 break
             }
@@ -124,6 +132,20 @@ fun PermissionsScreen(onPermissionsGranted: () -> Unit) {
                         Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                         Uri.parse("package:${context.packageName}")
                     )
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    context.startActivity(intent)
+                }
+            )
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            // Notification Access
+            PermissionItem(
+                title = "Notification Access",
+                description = "Required to intercept and silence notifications from blocked apps.",
+                isGranted = hasNotification,
+                onClick = {
+                    val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
                     intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
                     context.startActivity(intent)
                 }

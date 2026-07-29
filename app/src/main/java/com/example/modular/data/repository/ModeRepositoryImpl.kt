@@ -46,4 +46,16 @@ class ModeRepositoryImpl(
     override suspend fun clearSession() {
         sessionDao.clearSession()
     }
+
+    override fun getAllNotifications(): Flow<List<com.example.modular.data.local.NotificationEntity>> {
+        return db.notificationDao().getAllNotifications()
+    }
+
+    override suspend fun insertNotification(notification: com.example.modular.data.local.NotificationEntity) {
+        db.notificationDao().insertNotification(notification)
+    }
+
+    override suspend fun clearAllNotifications() {
+        db.notificationDao().clearAllNotifications()
+    }
 }
