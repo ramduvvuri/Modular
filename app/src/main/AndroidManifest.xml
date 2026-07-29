@@ -23,12 +23,6 @@
         </activity>
 
         <activity
-            android:name=".BlockingActivity"
-            android:exported="false"
-            android:launchMode="singleTask"
-            android:theme="@style/Theme.Modular" />
-
-        <activity
             android:name=".ExitTimerActivity"
             android:exported="false"
             android:launchMode="singleTask"

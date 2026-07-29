@@ -9,5 +9,6 @@ data class ModeEntity(
     val id: Long = 0,
     val name: String,
     val icon: String,
+    val durationMinutes: Int = 0,
     val createdAt: Long = System.currentTimeMillis()
 )

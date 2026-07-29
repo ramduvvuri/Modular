@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
@@ -12,6 +13,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -35,7 +39,7 @@ fun CreateModeScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Create Mode") },
+                title = { Text(if (state.isEditing) "Edit Mode" else "Create Mode") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -76,12 +80,68 @@ fun CreateModeScreen(
                     singleLine = true
                 )
             }
+            
+            // Duration Picker
+            var expanded by remember { mutableStateOf(false) }
+            val durationOptions = listOf(
+                0 to "Indefinite",
+                15 to "15 minutes",
+                30 to "30 minutes",
+                60 to "1 hour",
+                120 to "2 hours",
+                180 to "3 hours",
+                240 to "4 hours"
+            )
+            val selectedDurationLabel = durationOptions.find { it.first == state.durationMinutes }?.second ?: "Indefinite"
+            
+            ExposedDropdownMenuBox(
+                expanded = expanded,
+                onExpandedChange = { expanded = !expanded },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                OutlinedTextField(
+                    value = selectedDurationLabel,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Duration") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                    modifier = Modifier.menuAnchor().fillMaxWidth()
+                )
+                ExposedDropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false }
+                ) {
+                    durationOptions.forEach { (minutes, label) ->
+                        DropdownMenuItem(
+                            text = { Text(label) },
+                            onClick = {
+                                viewModel.updateDuration(minutes)
+                                expanded = false
+                            }
+                        )
+                    }
+                }
+            }
 
             Text(
                 text = "Allowed Apps",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+            
+            OutlinedTextField(
+                value = state.searchQuery,
+                onValueChange = { viewModel.updateSearchQuery(it) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                placeholder = { Text("Search apps...") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
+                singleLine = true
             )
 
             if (state.isLoadingApps) {
@@ -92,7 +152,7 @@ fun CreateModeScreen(
                 LazyColumn(
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    items(state.installedApps) { app ->
+                    items(state.filteredApps) { app ->
                         AppSelectionItem(
                             app = app,
                             isSelected = state.selectedPackages.contains(app.packageName),

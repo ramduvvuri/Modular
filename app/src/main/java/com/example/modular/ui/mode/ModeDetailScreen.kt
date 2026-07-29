@@ -3,6 +3,7 @@ package com.example.modular.ui.mode
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -37,16 +38,20 @@ class ModeDetailViewModel(
 
     init {
         viewModelScope.launch {
-            _mode.value = modeRepository.getModeById(modeId)
+            modeRepository.getAllModes().collect { modes ->
+                _mode.value = modes.find { it.id == modeId }
+            }
         }
     }
 
     fun startMode() {
+        val currentMode = _mode.value ?: return
         viewModelScope.launch {
             modeRepository.updateSession(
                 SessionEntity(
                     activeModeId = modeId,
                     startTime = System.currentTimeMillis(),
+                    durationMinutes = currentMode.durationMinutes,
                     isRunning = true
                 )
             )
@@ -73,7 +78,8 @@ class ModeDetailViewModelFactory(
 fun ModeDetailScreen(
     viewModel: ModeDetailViewModel,
     onNavigateBack: () -> Unit,
-    onModeStarted: () -> Unit
+    onModeStarted: () -> Unit,
+    onEditMode: () -> Unit
 ) {
     val mode by viewModel.mode.collectAsState()
     val isStarted by viewModel.isModeStarted.collectAsState()
@@ -91,6 +97,11 @@ fun ModeDetailScreen(
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onEditMode) {
+                        Icon(Icons.Default.Edit, contentDescription = "Edit")
                     }
                 }
             )

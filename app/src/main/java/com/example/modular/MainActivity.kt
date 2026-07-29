@@ -12,6 +12,8 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import androidx.navigation.NavType
 import com.example.modular.ui.theme.ModularTheme
 
 class MainActivity : ComponentActivity() {
@@ -64,9 +66,19 @@ fun ModularAppNavHost(app: ModularApp) {
                 onModeClick = { modeId -> navController.navigate("mode/$modeId") }
             )
         }
-        composable("create_mode") {
+        composable(
+            route = "create_mode?modeId={modeId}",
+            arguments = listOf(navArgument("modeId") { 
+                type = NavType.StringType
+                nullable = true
+                defaultValue = null 
+            })
+        ) { backStackEntry ->
+            val modeIdStr = backStackEntry.arguments?.getString("modeId")
+            val modeId = modeIdStr?.toLongOrNull()
+            
             val viewModel: com.example.modular.ui.mode.CreateModeViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
-                factory = com.example.modular.ui.mode.CreateModeViewModelFactory(app.modeRepository, app.appProvider)
+                factory = com.example.modular.ui.mode.CreateModeViewModelFactory(modeId, app.modeRepository, app.appProvider)
             )
             com.example.modular.ui.mode.CreateModeScreen(
                 viewModel = viewModel,
@@ -85,6 +97,9 @@ fun ModularAppNavHost(app: ModularApp) {
                     onNavigateBack = { navController.popBackStack() },
                     onModeStarted = { 
                         // The LaunchedEffect above should handle the navigation, but just in case
+                    },
+                    onEditMode = {
+                        navController.navigate("create_mode?modeId=$modeId")
                     }
                 )
             }
@@ -92,15 +107,20 @@ fun ModularAppNavHost(app: ModularApp) {
         composable("active_mode/{modeId}") { backStackEntry ->
             val modeIdStr = backStackEntry.arguments?.getString("modeId")
             var mode by remember { mutableStateOf<com.example.modular.data.local.ModeEntity?>(null) }
+            var totalAllowedApps by remember { mutableStateOf(0) }
             
             LaunchedEffect(modeIdStr) {
                 if (modeIdStr != null) {
-                    mode = app.modeRepository.getModeById(modeIdStr.toLong())
+                    val id = modeIdStr.toLong()
+                    mode = app.modeRepository.getModeById(id)
+                    totalAllowedApps = app.modeRepository.getAppsForModeSync(id).size
                 }
             }
             
             com.example.modular.ui.mode.ActiveModeScreen(
                 mode = mode,
+                session = session,
+                totalAllowedApps = totalAllowedApps,
                 onLeaveMode = {
                     val context = navController.context
                     val intent = android.content.Intent(context, ExitTimerActivity::class.java)

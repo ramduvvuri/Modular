@@ -11,19 +11,26 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
 data class CreateModeState(
     val modeName: String = "",
-    val modeIcon: String = "📚",
+    val modeIcon: String = "✨",
+    val durationMinutes: Int = 0,
+    val searchQuery: String = "",
     val installedApps: List<AppInfo> = emptyList(),
+    val filteredApps: List<AppInfo> = emptyList(),
     val selectedPackages: Set<String> = emptySet(),
     val isLoadingApps: Boolean = true,
     val isSaving: Boolean = false,
-    val isSaved: Boolean = false
+    val isSaved: Boolean = false,
+    val isEditing: Boolean = false,
+    val editModeId: Long? = null
 )
 
 class CreateModeViewModel(
+    private val modeId: Long?,
     private val modeRepository: ModeRepository,
     private val appProvider: AppProvider
 ) : ViewModel() {
@@ -33,13 +40,41 @@ class CreateModeViewModel(
 
     init {
         loadApps()
+        if (modeId != null) {
+            loadExistingMode(modeId)
+        }
+    }
+
+    private fun loadExistingMode(id: Long) {
+        viewModelScope.launch {
+            val mode = modeRepository.getModeById(id)
+            val allowedApps = modeRepository.getAppsForModeSync(id)
+            if (mode != null) {
+                _state.update { 
+                    it.copy(
+                        modeName = mode.name,
+                        modeIcon = mode.icon,
+                        durationMinutes = mode.durationMinutes,
+                        selectedPackages = allowedApps.map { app -> app.packageName }.toSet(),
+                        isEditing = true,
+                        editModeId = id
+                    )
+                }
+            }
+        }
     }
 
     private fun loadApps() {
         viewModelScope.launch {
-            _state.update { it.copy(isLoadingApps = true) }
             val apps = appProvider.getInstalledApps()
-            _state.update { it.copy(installedApps = apps, isLoadingApps = false) }
+            val filtered = apps.filter { it.packageName != "com.example.modular" }
+            _state.update { 
+                it.copy(
+                    installedApps = filtered,
+                    filteredApps = filtered,
+                    isLoadingApps = false
+                )
+            }
         }
     }
 
@@ -49,6 +84,23 @@ class CreateModeViewModel(
 
     fun updateIcon(icon: String) {
         _state.update { it.copy(modeIcon = icon) }
+    }
+    
+    fun updateDuration(minutes: Int) {
+        _state.update { it.copy(durationMinutes = minutes) }
+    }
+    
+    fun updateSearchQuery(query: String) {
+        _state.update { currentState -> 
+            val filtered = if (query.isEmpty()) {
+                currentState.installedApps
+            } else {
+                currentState.installedApps.filter { 
+                    it.appName.contains(query, ignoreCase = true) 
+                }
+            }
+            currentState.copy(searchQuery = query, filteredApps = filtered)
+        }
     }
 
     fun toggleAppSelection(packageName: String) {
@@ -80,10 +132,18 @@ class CreateModeViewModel(
                     )
                 }
             }
+
+            if (currentState.isEditing && currentState.editModeId != null) {
+                val oldMode = modeRepository.getModeById(currentState.editModeId)
+                if (oldMode != null) {
+                    modeRepository.deleteMode(oldMode)
+                }
+            }
             
             modeRepository.createMode(
                 name = currentState.modeName,
                 icon = currentState.modeIcon,
+                durationMinutes = currentState.durationMinutes,
                 allowedApps = allowedApps
             )
             
@@ -93,13 +153,14 @@ class CreateModeViewModel(
 }
 
 class CreateModeViewModelFactory(
+    private val modeId: Long?,
     private val modeRepository: ModeRepository,
     private val appProvider: AppProvider
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(CreateModeViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return CreateModeViewModel(modeRepository, appProvider) as T
+            return CreateModeViewModel(modeId, modeRepository, appProvider) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

@@ -9,6 +9,7 @@ data class SessionEntity(
     val id: Int = 1, // Singleton row
     val activeModeId: Long?,
     val startTime: Long,
+    val durationMinutes: Int = 0,
     val isRunning: Boolean,
     val isLeaving: Boolean = false,
     val leaveStartTime: Long = 0L
