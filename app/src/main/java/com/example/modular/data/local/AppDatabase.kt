@@ -4,6 +4,14 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import com.example.modular.data.local.ModeEntity
+import com.example.modular.data.local.AllowedAppEntity
+import com.example.modular.data.local.SessionEntity
+import com.example.modular.data.local.NotificationEntity
+import com.example.modular.data.local.ModeDao
+import com.example.modular.data.local.AllowedAppDao
+import com.example.modular.data.local.SessionDao
+import com.example.modular.data.local.NotificationDao
 
 @Database(
     entities = [ModeEntity::class, AllowedAppEntity::class, SessionEntity::class, NotificationEntity::class],

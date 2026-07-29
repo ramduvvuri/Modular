@@ -3,6 +3,7 @@ package com.example.modular.domain.repository
 import com.example.modular.data.local.AllowedAppEntity
 import com.example.modular.data.local.ModeEntity
 import com.example.modular.data.local.SessionEntity
+import com.example.modular.data.local.NotificationEntity
 import kotlinx.coroutines.flow.Flow
 
 interface ModeRepository {
@@ -19,7 +20,7 @@ interface ModeRepository {
     suspend fun clearSession()
 
     // Notification Inbox
-    fun getAllNotifications(): Flow<List<com.example.modular.data.local.NotificationEntity>>
-    suspend fun insertNotification(notification: com.example.modular.data.local.NotificationEntity)
+    fun getAllNotifications(): Flow<List<NotificationEntity>>
+    suspend fun insertNotification(notification: NotificationEntity)
     suspend fun clearAllNotifications()
 }
