@@ -3,6 +3,7 @@ package com.example.modular.service
 import android.accessibilityservice.AccessibilityService
 import android.content.Intent
 import android.view.accessibility.AccessibilityEvent
+import com.example.modular.BlockingActivity
 import com.example.modular.ModularApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
