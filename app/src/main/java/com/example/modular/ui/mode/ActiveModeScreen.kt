@@ -26,13 +26,19 @@ fun ActiveModeScreen(
     onLeaveMode: () -> Unit
 ) {
     var timeLeftMillis by remember { mutableStateOf(0L) }
+    var pauseTimeLeftMillis by remember { mutableStateOf(0L) }
     
     LaunchedEffect(session) {
-        if (session != null && session.endTimeMillis != null) {
+        if (session != null) {
             while (true) {
-                val remaining = session.endTimeMillis - System.currentTimeMillis()
-                timeLeftMillis = if (remaining > 0) remaining else 0
-                if (timeLeftMillis == 0L) break
+                if (session.endTimeMillis != null) {
+                    val remaining = session.endTimeMillis - System.currentTimeMillis()
+                    timeLeftMillis = if (remaining > 0) remaining else 0
+                }
+                if (session.isPaused && session.pauseEndTimeMillis != null) {
+                    val pauseRemaining = session.pauseEndTimeMillis - System.currentTimeMillis()
+                    pauseTimeLeftMillis = if (pauseRemaining > 0) pauseRemaining else 0
+                }
                 delay(1000)
             }
         }
@@ -70,7 +76,25 @@ fun ActiveModeScreen(
                 
                 Spacer(modifier = Modifier.height(32.dp))
                 
-                if (session != null && session.endTimeMillis != null) {
+                if (session?.isPaused == true && pauseTimeLeftMillis > 0) {
+                    Text(
+                        text = "Take a deep breath. You are on a break.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("Break Time Remaining")
+                    val totalSeconds = pauseTimeLeftMillis / 1000
+                    val minutes = totalSeconds / 60
+                    val seconds = totalSeconds % 60
+                    
+                    Text(
+                        text = String.format("%02d:%02d", minutes, seconds),
+                        style = MaterialTheme.typography.displayLarge.copy(fontSize = 56.sp),
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                } else if (session != null && session.endTimeMillis != null) {
                     Text("Time Remaining")
                     val totalSeconds = timeLeftMillis / 1000
                     val hours = totalSeconds / 3600
@@ -113,17 +137,19 @@ fun ActiveModeScreen(
             }
             
             Spacer(modifier = Modifier.height(64.dp))
-            Button(
-                onClick = onLeaveMode,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-            ) {
-                Text("Leave Mode")
+            if (session?.isPaused != true) {
+                Button(
+                    onClick = onLeaveMode,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                ) {
+                    Text("Take a 15-Minute Break")
+                }
             }
         }
     }

@@ -12,5 +12,7 @@ data class SessionEntity(
     val isRunning: Boolean = false,
     val endTimeMillis: Long? = null,
     val isLeaving: Boolean = false,
-    val leaveStartTime: Long = 0L
+    val leaveStartTime: Long = 0L,
+    val isPaused: Boolean = false,
+    val pauseEndTimeMillis: Long? = null
 )

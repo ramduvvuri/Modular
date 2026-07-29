@@ -77,7 +77,23 @@ class ExitTimerActivity : ComponentActivity() {
         
         lifecycleScope.launch {
             val app = application as ModularApp
-            app.modeRepository.clearSession()
+            val session = app.modeRepository.getSessionSync()
+            if (session != null) {
+                // Grant a 15-minute pause instead of completely leaving the mode
+                val pauseEnd = System.currentTimeMillis() + (15 * 60 * 1000)
+                val updatedSession = session.copy(
+                    isPaused = true,
+                    pauseEndTimeMillis = pauseEnd
+                )
+                app.modeRepository.updateSession(updatedSession)
+            }
+            
+            // Go back to home screen
+            val homeIntent = android.content.Intent(android.content.Intent.ACTION_MAIN).apply {
+                addCategory(android.content.Intent.CATEGORY_HOME)
+                flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            startActivity(homeIntent)
             finish()
         }
     }
@@ -119,14 +135,14 @@ fun ExitTimerScreen(
     ) {
         if (!isStarted) {
             Text(
-                text = "Leave Mode?",
+                text = "Take a Break?",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
             
             Text(
-                text = "This requires waiting five uninterrupted minutes.",
+                text = "Wait 5 uninterrupted minutes to earn a 15-minute break.",
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(bottom = 64.dp)
             )
@@ -141,7 +157,7 @@ fun ExitTimerScreen(
             }
         } else {
             Text(
-                text = "Leaving Mode",
+                text = "Unlocking Break...",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = 32.dp)

@@ -35,6 +35,14 @@ class ModularAccessibilityService : AccessibilityService() {
                         if (System.currentTimeMillis() >= session.endTimeMillis) {
                             // Session expired naturally
                             repository.clearSession()
+                        } else if (session.isPaused && session.pauseEndTimeMillis != null) {
+                            if (System.currentTimeMillis() >= session.pauseEndTimeMillis) {
+                                // Pause expired! Resume blocking.
+                                repository.updateSession(session.copy(
+                                    isPaused = false,
+                                    pauseEndTimeMillis = null
+                                ))
+                            }
                         }
                     }
                 } catch (e: Exception) {
@@ -127,6 +135,12 @@ class ModularAccessibilityService : AccessibilityService() {
         serviceScope.launch {
             val session = repository.getSessionSync()
             if (session != null && session.isRunning && session.activeModeId != null) {
+                
+                // If the session is actively on a break, allow all apps
+                if (session.isPaused) {
+                    return@launch
+                }
+                
                 // Ignore our own app and system UI
                 if (packageName == applicationContext.packageName || 
                     packageName == "com.android.systemui" || 
