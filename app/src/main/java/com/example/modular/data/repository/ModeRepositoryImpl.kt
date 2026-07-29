@@ -17,8 +17,8 @@ class ModeRepositoryImpl(
 
     override suspend fun getModeById(modeId: Long): ModeEntity? = modeDao.getModeById(modeId)
 
-    override suspend fun createMode(name: String, icon: String, allowedApps: List<AllowedAppEntity>): Long {
-        val mode = ModeEntity(name = name, icon = icon)
+    override suspend fun createMode(name: String, icon: String, durationMinutes: Int, allowedApps: List<AllowedAppEntity>): Long {
+        val mode = ModeEntity(name = name, icon = icon, durationMinutes = durationMinutes)
         val modeId = modeDao.insertMode(mode)
         
         val appsWithModeId = allowedApps.map { it.copy(modeId = modeId) }
