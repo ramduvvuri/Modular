@@ -165,6 +165,7 @@ class ModularAccessibilityService : AccessibilityService() {
         } catch (e: Exception) {
             e.printStackTrace()
         }
+    }
 
     override fun onInterrupt() {
         // Do nothing
