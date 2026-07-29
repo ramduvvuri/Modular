@@ -80,51 +80,6 @@ fun CreateModeScreen(
                     singleLine = true
                 )
             }
-            
-            // Duration Picker
-            var expanded by remember { mutableStateOf(false) }
-            val durationOptions = listOf(
-                0 to "Indefinite",
-                15 to "15 minutes",
-                30 to "30 minutes",
-                60 to "1 hour",
-                120 to "2 hours",
-                180 to "3 hours",
-                240 to "4 hours"
-            )
-            val selectedDurationLabel = durationOptions.find { it.first == state.durationMinutes }?.second ?: "Indefinite"
-            
-            ExposedDropdownMenuBox(
-                expanded = expanded,
-                onExpandedChange = { expanded = !expanded },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-            ) {
-                OutlinedTextField(
-                    value = selectedDurationLabel,
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Duration") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
-                    modifier = Modifier.menuAnchor().fillMaxWidth()
-                )
-                ExposedDropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false }
-                ) {
-                    durationOptions.forEach { (minutes, label) ->
-                        DropdownMenuItem(
-                            text = { Text(label) },
-                            onClick = {
-                                viewModel.updateDuration(minutes)
-                                expanded = false
-                            }
-                        )
-                    }
-                }
-            }
 
             Text(
                 text = "Allowed Apps",

@@ -15,6 +15,9 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.navigation.NavType
 import com.example.modular.ui.theme.ModularTheme
+import com.example.modular.ui.permissions.PermissionsScreen
+import com.example.modular.ui.permissions.isAccessibilityServiceEnabled
+import com.example.modular.ui.permissions.isOverlayPermissionGranted
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -54,8 +57,28 @@ fun ModularAppNavHost(app: ModularApp) {
             }
         }
     }
+    
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val hasPermissions = remember {
+        isAccessibilityServiceEnabled(context) && isOverlayPermissionGranted(context)
+    }
 
-    NavHost(navController = navController, startDestination = if (session?.isRunning == true) "active_mode/${session?.activeModeId}" else "home") {
+    val startDest = when {
+        !hasPermissions -> "permissions"
+        session?.isRunning == true -> "active_mode/${session?.activeModeId}"
+        else -> "home"
+    }
+
+    NavHost(navController = navController, startDestination = startDest) {
+        composable("permissions") {
+            PermissionsScreen(
+                onPermissionsGranted = {
+                    navController.navigate("home") {
+                        popUpTo(0)
+                    }
+                }
+            )
+        }
         composable("home") {
             val viewModel: com.example.modular.ui.home.HomeViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
                 factory = com.example.modular.ui.home.HomeViewModelFactory(app.modeRepository)

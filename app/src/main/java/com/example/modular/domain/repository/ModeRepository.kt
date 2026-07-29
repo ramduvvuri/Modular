@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.Flow
 interface ModeRepository {
     fun getAllModes(): Flow<List<ModeEntity>>
     suspend fun getModeById(modeId: Long): ModeEntity?
-    suspend fun createMode(name: String, icon: String, durationMinutes: Int, allowedApps: List<AllowedAppEntity>): Long
+    suspend fun createMode(name: String, icon: String, allowedApps: List<AllowedAppEntity>): Long
     suspend fun deleteMode(mode: ModeEntity)
     fun getAppsForMode(modeId: Long): Flow<List<AllowedAppEntity>>
     suspend fun getAppsForModeSync(modeId: Long): List<AllowedAppEntity>

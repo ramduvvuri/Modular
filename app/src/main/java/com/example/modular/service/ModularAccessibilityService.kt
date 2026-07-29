@@ -33,11 +33,8 @@ class ModularAccessibilityService : AccessibilityService() {
             while (true) {
                 try {
                     val session = repository.getSessionSync()
-                    if (session != null && session.isRunning && session.durationMinutes > 0) {
-                        val elapsedMillis = System.currentTimeMillis() - session.startTime
-                        val durationMillis = session.durationMinutes * 60 * 1000L
-                        
-                        if (elapsedMillis >= durationMillis) {
+                    if (session != null && session.isRunning && session.endTimeMillis != null) {
+                        if (System.currentTimeMillis() >= session.endTimeMillis) {
                             // Session expired naturally
                             repository.clearSession()
                             launch(Dispatchers.Main) {

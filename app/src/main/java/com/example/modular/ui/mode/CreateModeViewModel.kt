@@ -17,7 +17,6 @@ import kotlinx.coroutines.launch
 data class CreateModeState(
     val modeName: String = "",
     val modeIcon: String = "✨",
-    val durationMinutes: Int = 0,
     val searchQuery: String = "",
     val installedApps: List<AppInfo> = emptyList(),
     val filteredApps: List<AppInfo> = emptyList(),
@@ -54,7 +53,6 @@ class CreateModeViewModel(
                     it.copy(
                         modeName = mode.name,
                         modeIcon = mode.icon,
-                        durationMinutes = mode.durationMinutes,
                         selectedPackages = allowedApps.map { app -> app.packageName }.toSet(),
                         isEditing = true,
                         editModeId = id
@@ -84,10 +82,6 @@ class CreateModeViewModel(
 
     fun updateIcon(icon: String) {
         _state.update { it.copy(modeIcon = icon) }
-    }
-    
-    fun updateDuration(minutes: Int) {
-        _state.update { it.copy(durationMinutes = minutes) }
     }
     
     fun updateSearchQuery(query: String) {
@@ -143,7 +137,6 @@ class CreateModeViewModel(
             modeRepository.createMode(
                 name = currentState.modeName,
                 icon = currentState.modeIcon,
-                durationMinutes = currentState.durationMinutes,
                 allowedApps = allowedApps
             )
             

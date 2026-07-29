@@ -24,6 +24,15 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import java.util.Calendar
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberTimePickerState
+import androidx.compose.material3.ExperimentalMaterial3Api
 
 class ModeDetailViewModel(
     private val modeId: Long,
@@ -44,14 +53,14 @@ class ModeDetailViewModel(
         }
     }
 
-    fun startMode() {
+    fun startMode(endTimeMillis: Long?) {
         val currentMode = _mode.value ?: return
         viewModelScope.launch {
             modeRepository.updateSession(
                 SessionEntity(
                     activeModeId = modeId,
                     startTime = System.currentTimeMillis(),
-                    durationMinutes = currentMode.durationMinutes,
+                    endTimeMillis = endTimeMillis,
                     isRunning = true
                 )
             )
@@ -88,6 +97,49 @@ fun ModeDetailScreen(
         if (isStarted) {
             onModeStarted()
         }
+    }
+
+    var showTimePicker by remember { mutableStateOf(false) }
+
+    if (showTimePicker) {
+        val calendar = Calendar.getInstance()
+        val timePickerState = rememberTimePickerState(
+            initialHour = calendar.get(Calendar.HOUR_OF_DAY),
+            initialMinute = calendar.get(Calendar.MINUTE),
+            is24Hour = false
+        )
+
+        AlertDialog(
+            onDismissRequest = { showTimePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    showTimePicker = false
+                    val selectedCalendar = Calendar.getInstance().apply {
+                        set(Calendar.HOUR_OF_DAY, timePickerState.hour)
+                        set(Calendar.MINUTE, timePickerState.minute)
+                        set(Calendar.SECOND, 0)
+                        set(Calendar.MILLISECOND, 0)
+                        
+                        // If selected time is before current time, assume it's for tomorrow
+                        if (before(Calendar.getInstance())) {
+                            add(Calendar.DAY_OF_MONTH, 1)
+                        }
+                    }
+                    viewModel.startMode(selectedCalendar.timeInMillis)
+                }) {
+                    Text("Start")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showTimePicker = false }) {
+                    Text("Cancel")
+                }
+            },
+            title = { Text("When should this mode end?") },
+            text = {
+                TimePicker(state = timePickerState)
+            }
+        )
     }
 
     Scaffold(
@@ -131,13 +183,28 @@ fun ModeDetailScreen(
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(64.dp))
+                
                 Button(
-                    onClick = { viewModel.startMode() },
+                    onClick = { viewModel.startMode(null) },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.secondary
+                    ),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp)
                 ) {
-                    Text("Start Mode")
+                    Text("Start Indefinitely")
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Button(
+                    onClick = { showTimePicker = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                ) {
+                    Text("Set End Time & Start")
                 }
             }
         }

@@ -28,11 +28,9 @@ fun ActiveModeScreen(
     var timeLeftMillis by remember { mutableStateOf(0L) }
     
     LaunchedEffect(session) {
-        if (session != null && session.durationMinutes > 0) {
-            val durationMillis = session.durationMinutes * 60 * 1000L
+        if (session != null && session.endTimeMillis != null) {
             while (true) {
-                val elapsed = System.currentTimeMillis() - session.startTime
-                val remaining = durationMillis - elapsed
+                val remaining = session.endTimeMillis - System.currentTimeMillis()
                 timeLeftMillis = if (remaining > 0) remaining else 0
                 if (timeLeftMillis == 0L) break
                 delay(1000)
@@ -72,7 +70,7 @@ fun ActiveModeScreen(
                 
                 Spacer(modifier = Modifier.height(32.dp))
                 
-                if (session != null && session.durationMinutes > 0) {
+                if (session != null && session.endTimeMillis != null) {
                     Text("Time Remaining")
                     val totalSeconds = timeLeftMillis / 1000
                     val hours = totalSeconds / 3600
