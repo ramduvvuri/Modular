@@ -18,7 +18,8 @@ class ModularApp : Application() {
         val database = AppDatabase.getDatabase(this)
         modeRepository = ModeRepositoryImpl(
             modeDao = database.modeDao(),
-            sessionDao = database.sessionDao()
+            sessionDao = database.sessionDao(),
+            notificationDao = database.notificationDao()
         )
         appProvider = AppProviderImpl(this)
     }

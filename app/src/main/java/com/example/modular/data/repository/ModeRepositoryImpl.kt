@@ -10,7 +10,8 @@ import kotlinx.coroutines.flow.Flow
 
 class ModeRepositoryImpl(
     private val modeDao: ModeDao,
-    private val sessionDao: SessionDao
+    private val sessionDao: SessionDao,
+    private val notificationDao: com.example.modular.data.local.NotificationDao
 ) : ModeRepository {
 
     override fun getAllModes(): Flow<List<ModeEntity>> = modeDao.getAllModes()
@@ -48,14 +49,14 @@ class ModeRepositoryImpl(
     }
 
     override fun getAllNotifications(): Flow<List<com.example.modular.data.local.NotificationEntity>> {
-        return db.notificationDao().getAllNotifications()
+        return notificationDao.getAllNotifications()
     }
 
     override suspend fun insertNotification(notification: com.example.modular.data.local.NotificationEntity) {
-        db.notificationDao().insertNotification(notification)
+        notificationDao.insertNotification(notification)
     }
 
     override suspend fun clearAllNotifications() {
-        db.notificationDao().clearAllNotifications()
+        notificationDao.clearAllNotifications()
     }
 }
