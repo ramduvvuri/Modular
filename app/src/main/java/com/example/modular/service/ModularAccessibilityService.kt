@@ -52,7 +52,7 @@ class ModularAccessibilityService : AccessibilityService() {
                         
                         if (hour >= 21 || hour < 7) {
                             // Find the Night Mode preset
-                            val allModes = kotlinx.coroutines.flow.first(repository.getAllModes())
+                            val allModes = repository.getAllModes().first()
                             val nightMode = allModes.find { it.name.equals("Night Mode", ignoreCase = true) }
                             
                             if (nightMode != null) {

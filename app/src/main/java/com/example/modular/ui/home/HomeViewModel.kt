@@ -19,11 +19,9 @@ class HomeViewModel(
     init {
         // Pre-populate "Night Mode" if database is completely empty
         viewModelScope.launch {
-            val currentModes = kotlinx.coroutines.flow.first(modeRepository.getAllModes())
+            val currentModes = modeRepository.getAllModes().first()
             if (currentModes.isEmpty()) {
-                modeRepository.insertMode(
-                    ModeEntity(name = "Night Mode", icon = "🌙")
-                )
+                modeRepository.createMode("Night Mode", "🌙", emptyList())
             }
         }
     }
