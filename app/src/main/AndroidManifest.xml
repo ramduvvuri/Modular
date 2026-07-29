@@ -38,6 +38,15 @@
             android:noHistory="true"
             android:taskAffinity=""
             android:theme="@style/Theme.Modular" />
+            
+        <activity
+            android:name=".ui.blocking.UninstallTimerActivity"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@style/Theme.Modular" />
 
         <service
             android:name=".service.ModularAccessibilityService"

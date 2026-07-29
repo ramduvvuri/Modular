@@ -1,10 +1,13 @@
 package com.example.modular.service
 
 import android.accessibilityservice.AccessibilityService
+import android.content.Context
 import android.content.Intent
 import android.view.accessibility.AccessibilityEvent
+import android.view.accessibility.AccessibilityNodeInfo
 import com.example.modular.ExitTimerActivity
 import com.example.modular.ModularApp
+import com.example.modular.ui.blocking.UninstallTimerActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -45,11 +48,74 @@ class ModularAccessibilityService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event == null) return
 
-        if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+        if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED || 
+            event.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
+            
             val packageName = event.packageName?.toString() ?: return
+            
+            // Check for uninstall attempt
+            if (checkForUninstallAttempt(packageName, event)) {
+                return
+            }
             
             // Check if we need to block this app
             checkAndBlockApp(packageName)
+        }
+    }
+
+    private fun checkForUninstallAttempt(packageName: String, event: AccessibilityEvent): Boolean {
+        // Only inspect likely packages to save performance
+        val inspectPackages = listOf(
+            "com.android.settings",
+            "com.google.android.packageinstaller",
+            "com.samsung.android.packageinstaller",
+            "com.miui.securitycenter",
+            "com.android.launcher",
+            "com.sec.android.app.launcher",
+            "com.google.android.apps.nexuslauncher"
+        )
+        
+        if (!inspectPackages.contains(packageName)) return false
+        
+        val node = event.source ?: rootInActiveWindow ?: return false
+        val texts = mutableListOf<String>()
+        extractText(node, texts)
+        val screenText = texts.joinToString(" ").lowercase()
+        
+        // Very basic heuristic to catch the uninstall dialog or app info page for Modular
+        if (screenText.contains("uninstall") && screenText.contains("modular")) {
+            // Check if unlocked
+            val prefs = getSharedPreferences("modular_prefs", Context.MODE_PRIVATE)
+            val unlockUntil = prefs.getLong("uninstall_unlock_until", 0L)
+            
+            if (System.currentTimeMillis() < unlockUntil) {
+                // User is in the 5-minute unlock window, allow uninstall
+                return false
+            }
+            
+            // Trigger 10-minute timer
+            val intent = Intent(this, UninstallTimerActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            }
+            startActivity(intent)
+            return true
+        }
+        return false
+    }
+
+    private fun extractText(node: AccessibilityNodeInfo, textList: MutableList<String>) {
+        if (node.text != null) {
+            textList.add(node.text.toString())
+        }
+        if (node.contentDescription != null) {
+            textList.add(node.contentDescription.toString())
+        }
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i)
+            if (child != null) {
+                extractText(child, textList)
+                child.recycle()
+            }
         }
     }
 
@@ -71,14 +137,7 @@ class ModularAccessibilityService : AccessibilityService() {
                 val explicitlyBlockedApps = repository.getAppsForModeSync(session.activeModeId)
                 val isExplicitlyBlocked = explicitlyBlockedApps.any { it.packageName == packageName }
 
-                // Apps that are ALWAYS blocked during an active mode to prevent easy uninstalls
-                val preventUninstallApps = listOf(
-                    "com.android.settings",
-                    "com.android.vending", // Google Play Store
-                    "com.google.android.packageinstaller" // System Installer
-                )
-
-                if (isExplicitlyBlocked || preventUninstallApps.contains(packageName)) {
+                if (isExplicitlyBlocked) {
                     launch(Dispatchers.Main) {
                         showOverlay(packageName)
                     }
