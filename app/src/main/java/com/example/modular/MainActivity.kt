@@ -1,0 +1,112 @@
+package com.example.modular
+
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import com.example.modular.ui.theme.ModularTheme
+
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        val app = application as ModularApp
+        
+        setContent {
+            ModularTheme {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    ModularAppNavHost(app = app)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ModularAppNavHost(app: ModularApp) {
+    val navController = rememberNavController()
+    
+    val session by app.modeRepository.getSession().collectAsState(initial = null)
+    
+    LaunchedEffect(session) {
+        if (session != null && session!!.isRunning) {
+            navController.navigate("active_mode/${session!!.activeModeId}") {
+                popUpTo(0) // Clear back stack
+            }
+        } else {
+            // Wait, we don't want to constantly navigate to home if we are creating a mode
+            if (navController.currentDestination?.route?.startsWith("active_mode") == true) {
+                 navController.navigate("home") {
+                    popUpTo(0)
+                 }
+            }
+        }
+    }
+
+    NavHost(navController = navController, startDestination = if (session?.isRunning == true) "active_mode/${session?.activeModeId}" else "home") {
+        composable("home") {
+            val viewModel: com.example.modular.ui.home.HomeViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
+                factory = com.example.modular.ui.home.HomeViewModelFactory(app.modeRepository)
+            )
+            com.example.modular.ui.home.HomeScreen(
+                viewModel = viewModel,
+                onCreateModeClick = { navController.navigate("create_mode") },
+                onModeClick = { modeId -> navController.navigate("mode/$modeId") }
+            )
+        }
+        composable("create_mode") {
+            val viewModel: com.example.modular.ui.mode.CreateModeViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
+                factory = com.example.modular.ui.mode.CreateModeViewModelFactory(app.modeRepository, app.appProvider)
+            )
+            com.example.modular.ui.mode.CreateModeScreen(
+                viewModel = viewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+        composable("mode/{modeId}") { backStackEntry ->
+            val modeIdStr = backStackEntry.arguments?.getString("modeId")
+            if (modeIdStr != null) {
+                val modeId = modeIdStr.toLong()
+                val viewModel: com.example.modular.ui.mode.ModeDetailViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
+                    factory = com.example.modular.ui.mode.ModeDetailViewModelFactory(modeId, app.modeRepository)
+                )
+                com.example.modular.ui.mode.ModeDetailScreen(
+                    viewModel = viewModel,
+                    onNavigateBack = { navController.popBackStack() },
+                    onModeStarted = { 
+                        // The LaunchedEffect above should handle the navigation, but just in case
+                    }
+                )
+            }
+        }
+        composable("active_mode/{modeId}") { backStackEntry ->
+            val modeIdStr = backStackEntry.arguments?.getString("modeId")
+            var mode by remember { mutableStateOf<com.example.modular.data.local.ModeEntity?>(null) }
+            
+            LaunchedEffect(modeIdStr) {
+                if (modeIdStr != null) {
+                    mode = app.modeRepository.getModeById(modeIdStr.toLong())
+                }
+            }
+            
+            com.example.modular.ui.mode.ActiveModeScreen(
+                mode = mode,
+                onLeaveMode = {
+                    val context = navController.context
+                    val intent = android.content.Intent(context, ExitTimerActivity::class.java)
+                    context.startActivity(intent)
+                }
+            )
+        }
+    }
+}

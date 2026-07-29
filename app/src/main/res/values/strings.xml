@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Modular</string>
+    <string name="accessibility_service_description">Modular uses Accessibility Services to detect when you open a distracting app, allowing it to block the app and help you stay focused.</string>
+</resources>
