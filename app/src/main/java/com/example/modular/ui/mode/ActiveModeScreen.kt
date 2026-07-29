@@ -106,8 +106,7 @@ fun ActiveModeScreen(
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text("Stats", fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text("Allowed Apps: $totalAllowedApps")
-                    }
+                        Text("Blocked Apps: $totalAllowedApps", style = MaterialTheme.typography.bodyLarge)                  }
                 }
             } else {
                 Text(text = "Loading...")

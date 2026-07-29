@@ -68,18 +68,17 @@ class ModularAccessibilityService : AccessibilityService() {
                     return@launch
                 }
 
-                val allowedApps = repository.getAppsForModeSync(session.activeModeId)
-                val isAllowed = allowedApps.any { it.packageName == packageName }
+                val explicitlyBlockedApps = repository.getAppsForModeSync(session.activeModeId)
+                val isExplicitlyBlocked = explicitlyBlockedApps.any { it.packageName == packageName }
 
-                // Define emergency apps that are always allowed
-                val emergencyApps = listOf(
-                    "com.android.dialer", "com.google.android.dialer", "com.samsung.android.dialer", // Phone
-                    "com.android.mms", "com.google.android.apps.messaging", "com.samsung.android.messaging", // Messages
-                    "com.android.deskclock", "com.google.android.deskclock", "com.samsung.android.app.clockpack", // Clock
-                    "com.android.camera2", "com.google.android.GoogleCamera", "com.sec.android.app.camera" // Camera
+                // Apps that are ALWAYS blocked during an active mode to prevent easy uninstalls
+                val preventUninstallApps = listOf(
+                    "com.android.settings",
+                    "com.android.vending", // Google Play Store
+                    "com.google.android.packageinstaller" // System Installer
                 )
 
-                if (!isAllowed && !emergencyApps.contains(packageName)) {
+                if (isExplicitlyBlocked || preventUninstallApps.contains(packageName)) {
                     launch(Dispatchers.Main) {
                         showOverlay(packageName)
                     }
