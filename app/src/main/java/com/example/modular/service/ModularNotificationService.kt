@@ -61,13 +61,11 @@ class ModularNotificationService : NotificationListenerService() {
                 
                 var text = ""
                 // Check for MessagingStyle (like WhatsApp)
-                val messages = extras.getParcelableArray(Notification.EXTRA_MESSAGES)
-                if (messages != null && messages.isNotEmpty()) {
-                    val lastMessage = messages.last()
-                    if (lastMessage is android.app.Notification.MessagingStyle.Message) {
-                        text = lastMessage.text?.toString() ?: ""
-                    } else if (lastMessage is android.os.Bundle) {
-                        text = lastMessage.getCharSequence("text")?.toString() ?: ""
+                val parcelables = extras.getParcelableArray(Notification.EXTRA_MESSAGES)
+                if (parcelables != null && parcelables.isNotEmpty()) {
+                    val messagesList = android.app.Notification.MessagingStyle.Message.getMessagesFromBundleArray(parcelables)
+                    if (messagesList.isNotEmpty()) {
+                        text = messagesList.last().text?.toString() ?: ""
                     }
                 }
                 
