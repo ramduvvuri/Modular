@@ -13,15 +13,50 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
 import com.example.modular.ui.blocking.BlockingActivity
+import com.example.modular.data.local.SessionEntity
+import com.example.modular.data.local.AllowedAppEntity
 
 class ModularAccessibilityService : AccessibilityService() {
 
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private var currentSession: SessionEntity? = null
+    private var explicitlyBlockedApps: List<AllowedAppEntity> = emptyList()
+    private var defaultLauncherPackage: String? = null
+    private var appsCollectionJob: Job? = null
     
     override fun onServiceConnected() {
         super.onServiceConnected()
+        defaultLauncherPackage = getDefaultLauncherPackage()
+
+        val app = application as? ModularApp
+        if (app != null) {
+            serviceScope.launch {
+                app.modeRepository.getSession().collect { session ->
+                    currentSession = session
+                    appsCollectionJob?.cancel()
+                    if (session != null && session.activeModeId != null) {
+                        appsCollectionJob = launch {
+                            app.modeRepository.getAppsForMode(session.activeModeId).collect { apps ->
+                                explicitlyBlockedApps = apps
+                            }
+                        }
+                    } else {
+                        explicitlyBlockedApps = emptyList()
+                    }
+                }
+            }
+        }
+        
         startSessionMonitor()
+    }
+    
+    private fun getDefaultLauncherPackage(): String? {
+        val intent = Intent(Intent.ACTION_MAIN)
+        intent.addCategory(Intent.CATEGORY_HOME)
+        val resolveInfo = packageManager.resolveActivity(intent, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)
+        return resolveInfo?.activityInfo?.packageName
     }
     
     private fun startSessionMonitor() {
@@ -87,8 +122,7 @@ class ModularAccessibilityService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event == null) return
 
-        if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED || 
-            event.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
+        if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
             
             val packageName = event.packageName?.toString() ?: return
             val className = event.className?.toString() ?: ""
@@ -114,10 +148,7 @@ class ModularAccessibilityService : AccessibilityService() {
             "com.android.settings",
             "com.google.android.packageinstaller",
             "com.samsung.android.packageinstaller",
-            "com.miui.securitycenter",
-            "com.android.launcher",
-            "com.sec.android.app.launcher",
-            "com.google.android.apps.nexuslauncher"
+            "com.miui.securitycenter"
         )
         
         if (!inspectPackages.contains(packageName)) return false
@@ -166,33 +197,26 @@ class ModularAccessibilityService : AccessibilityService() {
 
 
     private fun checkAndBlockApp(packageName: String) {
-        val app = application as? ModularApp ?: return
-        val repository = app.modeRepository
+        val session = currentSession
+        if (session != null && session.isRunning && session.activeModeId != null) {
+            
+            // If the session is actively on a break, allow all apps
+            if (session.isPaused) {
+                return
+            }
+            
+            // Ignore our own app, system UI, keyboard, and launcher
+            if (packageName == applicationContext.packageName || 
+                packageName == "com.android.systemui" || 
+                packageName == "com.google.android.inputmethod.latin" ||
+                packageName == defaultLauncherPackage) {
+                return
+            }
 
-        serviceScope.launch {
-            val session = repository.getSessionSync()
-            if (session != null && session.isRunning && session.activeModeId != null) {
-                
-                // If the session is actively on a break, allow all apps
-                if (session.isPaused) {
-                    return@launch
-                }
-                
-                // Ignore our own app and system UI
-                if (packageName == applicationContext.packageName || 
-                    packageName == "com.android.systemui" || 
-                    packageName == "com.google.android.inputmethod.latin") { // Allow keyboard
-                    return@launch
-                }
+            val isExplicitlyBlocked = explicitlyBlockedApps.any { it.packageName == packageName }
 
-                val explicitlyBlockedApps = repository.getAppsForModeSync(session.activeModeId)
-                val isExplicitlyBlocked = explicitlyBlockedApps.any { it.packageName == packageName }
-
-                if (isExplicitlyBlocked) {
-                    launch(Dispatchers.Main) {
-                        showOverlay(packageName)
-                    }
-                }
+            if (isExplicitlyBlocked) {
+                showOverlay(packageName)
             }
         }
     }

@@ -9,10 +9,37 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import com.example.modular.data.local.SessionEntity
+import com.example.modular.data.local.AllowedAppEntity
 
 class ModularNotificationService : NotificationListenerService() {
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var currentSession: SessionEntity? = null
+    private var explicitlyBlockedApps: List<AllowedAppEntity> = emptyList()
+    private var appsCollectionJob: Job? = null
+
+    override fun onListenerConnected() {
+        super.onListenerConnected()
+        val app = application as? ModularApp ?: return
+        
+        serviceScope.launch {
+            app.modeRepository.getSession().collect { session ->
+                currentSession = session
+                appsCollectionJob?.cancel()
+                if (session != null && session.activeModeId != null) {
+                    appsCollectionJob = launch {
+                        app.modeRepository.getAppsForMode(session.activeModeId).collect { apps ->
+                            explicitlyBlockedApps = apps
+                        }
+                    }
+                } else {
+                    explicitlyBlockedApps = emptyList()
+                }
+            }
+        }
+    }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         super.onNotificationPosted(sbn)
@@ -23,33 +50,47 @@ class ModularNotificationService : NotificationListenerService() {
         // Ignore system notifications
         if (packageName == "android" || packageName == "com.android.systemui") return
 
-        val app = application as? ModularApp ?: return
-        val repository = app.modeRepository
+        val session = currentSession
+        if (session != null && session.isRunning && session.activeModeId != null && !session.isPaused) {
+            val isExplicitlyBlocked = explicitlyBlockedApps.any { it.packageName == packageName }
 
-        serviceScope.launch {
-            val session = repository.getSessionSync()
-            // If session is active and NOT paused
-            if (session != null && session.isRunning && session.activeModeId != null && !session.isPaused) {
-                val explicitlyBlockedApps = repository.getAppsForModeSync(session.activeModeId)
-                val isExplicitlyBlocked = explicitlyBlockedApps.any { it.packageName == packageName }
-
-                if (isExplicitlyBlocked) {
-                    // Extract text
-                    val extras = sbn.notification.extras
-                    val title = extras.getString(Notification.EXTRA_TITLE) ?: "New Message"
-                    val text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString() ?: ""
-                    
-                    // Try to get app name
-                    val pm = packageManager
-                    val appName = try {
-                        val ai = pm.getApplicationInfo(packageName, 0)
-                        pm.getApplicationLabel(ai).toString()
-                    } catch (e: Exception) {
-                        packageName
+            if (isExplicitlyBlocked) {
+                // Extract text
+                val extras = sbn.notification.extras
+                val title = extras.getString(Notification.EXTRA_TITLE) ?: "New Message"
+                
+                var text = ""
+                // Check for MessagingStyle (like WhatsApp)
+                val messages = extras.getParcelableArray(Notification.EXTRA_MESSAGES)
+                if (messages != null && messages.isNotEmpty()) {
+                    val lastMessage = messages.last()
+                    if (lastMessage is android.app.Notification.MessagingStyle.Message) {
+                        text = lastMessage.text?.toString() ?: ""
+                    } else if (lastMessage is android.os.Bundle) {
+                        text = lastMessage.getCharSequence("text")?.toString() ?: ""
                     }
+                }
+                
+                // Fallbacks
+                if (text.isBlank()) {
+                    text = extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString() 
+                        ?: extras.getCharSequence(Notification.EXTRA_TEXT)?.toString() 
+                        ?: ""
+                }
+                
+                // Try to get app name
+                val pm = packageManager
+                val appName = try {
+                    val ai = pm.getApplicationInfo(packageName, 0)
+                    pm.getApplicationLabel(ai).toString()
+                } catch (e: Exception) {
+                    packageName
+                }
 
-                    // Save to Database
-                    repository.insertNotification(
+                // Save to Database
+                val app = application as? ModularApp ?: return
+                serviceScope.launch {
+                    app.modeRepository.insertNotification(
                         NotificationEntity(
                             packageName = packageName,
                             appName = appName,
@@ -58,10 +99,10 @@ class ModularNotificationService : NotificationListenerService() {
                             timestamp = System.currentTimeMillis()
                         )
                     )
-
-                    // Cancel the notification so it doesn't bother the user
-                    cancelNotification(sbn.key)
                 }
+
+                // Cancel the notification so it doesn't bother the user
+                cancelNotification(sbn.key)
             }
         }
     }

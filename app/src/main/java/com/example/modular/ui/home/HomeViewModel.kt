@@ -17,10 +17,11 @@ class HomeViewModel(
 ) : ViewModel() {
 
     init {
-        // Pre-populate "Night Mode" if database is completely empty
+        // Pre-populate "Night Mode" if it doesn't exist
         viewModelScope.launch {
             val currentModes = modeRepository.getAllModes().first()
-            if (currentModes.isEmpty()) {
+            val hasNightMode = currentModes.any { it.name.equals("Night Mode", ignoreCase = true) }
+            if (!hasNightMode) {
                 modeRepository.createMode("Night Mode", "🌙", emptyList())
             }
         }
